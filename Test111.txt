@@ -1,0 +1,42 @@
+你是一名资深前端工程师。请生成一个【单文件 HTML】的「GitHub 图床工作台」，要求如下：
+ 
+【一、技术约束】
+1. 只输出一个完整的 .html 文件，CSS 与 JS 全部内联，双击即可在浏览器打开运行，不需要构建、不需要服务器。
+2. 优先使用原生 JavaScript；如果要用 Vue，只能引入 Vue 3 全局构建版，并且必须做多 CDN 回退（jsdelivr → unpkg → staticfile），避免某个 CDN 被墙导致页面显示未编译的模板。
+3. 所有 GitHub 操作都用浏览器 fetch 直连 https://api.github.com。
+ 
+【二、配置区（放在 JS 最顶部，方便我修改）】
+const CONFIG = {
+  GITHUB_OWNER: '你的用户名',
+  GITHUB_REPO: '你的仓库名',
+  GITHUB_BRANCH: 'main',
+  BASE_URL: 'https://你的自定义域名/'   // 没绑域名就填 https://用户名.github.io/仓库名/
+};
+ 
+【三、核心功能】
+1. Token 配置：输入 GitHub Personal Access Token，点“验证并保存”时调用
+   GET
+https://api.github.com/repos/{owner}/{repo}
+   请求头 Authorization: token <PAT、Accept: application/vnd.github.v3+json。
+   成功则显示“已授权”，并把 Token 存进 localStorage（key: gh_pat_token）；失败按状态码提示原因（401=Token 无效，403=无权限或被限流，404=仓库不存在）。
+2. 列出资产：用 GET .../git/trees/{branch}?recursive=1 拉取全量文件，过滤出图片(jpg/jpeg/png/gif/webp/svg/bmp/ico/avif)、音频(mp3/wav/m4a/ogg/flac/aac)、字体(ttf/otf/woff/woff2/eot)。
+3. 上传：支持拖拽 + 点击多选；先用 GET .../contents/{path}?ref={branch} 检查是否已存在，存在就取回 sha 做覆盖；再用 PUT .../contents/{path} 上传，body 为 { message, content: base64, branch, sha? }。逐个文件显示进度与结果。
+4. 新建子目录：用 PUT .../contents/{目录}/.gitkeep 创建空目录。
+5. 对外链接：每个资产提供“复制外链”按钮，链接 = BASE_URL + 去掉开头 / 的仓库内路径。
+6. 删除：先 GET 取 sha，再 DELETE .../contents/{path}（body 含 message/branch/sha），删除前二次确认。
+7. 搜索与筛选：按文件名实时搜索；按类型切换（全部/图片/音频/字体）。
+8. 视图：网格 / 列表两种视图切换；卡片显示预览（图片用 <img，音频用 <audio，字体用图标 + 字体名）。
+9. 批量操作：多选后可批量删除、批量复制外链。
+10. 提示：用 toast 显示成功/失败；每次操作后自动刷新列表。
+ 
+【四、安全与健壮】
+- Token 只存 localStorage，绝不写进代码，也绝不发送到 api.github.com 以外的任何地址。
+- 路径含中文或空格时，用 encodeURIComponent 逐段编码。
+- localStorage 不可用（无痕模式/沙箱）时降级为内存存储，不能抛异常把页面搞崩。
+- 网络异常与 401/403/404/409 都要有清晰的中文提示。
+ 
+【五、UI 风格】
+- 简洁现代的浅色主题，中文界面；三栏布局（左侧配置+上传、中间画廊、右侧详情），窄屏自动折叠为标签页。
+ 
+请先用一句话说明方案，然后输出完整 HTML 代码。
+
